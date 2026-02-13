@@ -1,0 +1,77 @@
+const mongoose = require("mongoose");
+
+const privateEventRequestSchema = new mongoose.Schema({
+  client_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: false
+  },
+
+  full_name: {
+    type: String,
+    required: true,
+    trim: true
+  },
+
+  mobile: {
+    type: String,
+    required: true,
+    trim: true
+  },
+
+  event_type: {
+    type: String,
+    required: true,
+    enum: ["Wedding", "Birthday", "Baby Shower", "Corporate"]
+  },
+
+  event_date: {
+    type: Date,
+    required: true
+  },
+
+  event_time: {
+    type: String,
+    trim: true
+  },
+
+  location: {
+    type: String,
+    required: true,
+    maxlength: 150
+  },
+
+  guests: {
+    type: Number
+  },
+
+  budget: {
+    type: Number
+  },
+
+  special_requirements: {
+    type: String
+  },
+
+  status: {
+    type: String,
+    enum: ["pending", "approved", "rejected", "completed"],
+    default: "pending"
+  },
+
+  package_id: {
+    type: String,
+    required: false
+  },
+
+  created_at: {
+    type: Date,
+    default: Date.now
+  }
+
+});
+
+module.exports = mongoose.model(
+  "PrivateEventRequest",
+  privateEventRequestSchema
+);
