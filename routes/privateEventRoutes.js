@@ -1,7 +1,16 @@
 const express = require("express");
 const router = express.Router();
-const controller = require("../controllers/privateEventController");
+const {
+  createPrivateEventRequest,
+  adminCreatePrivateEventRequest
+} = require("../controllers/privateEventController");
 
-router.post("/", controller.createPrivateEventRequest);
+const { protect, isAdmin, isUser } = require("../middleware/authMiddleware.js");
+
+// User create booking
+router.post("/", protect, isUser, createPrivateEventRequest);
+
+// Admin create booking manually
+router.post("/admin/add", protect, isAdmin, adminCreatePrivateEventRequest);
 
 module.exports = router;

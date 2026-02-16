@@ -3,13 +3,14 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
+const Admin = require('../models/Admin');
 
 const router = express.Router();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Helper to generate JWT
-function generateToken(user) {
-  const payload = { id: user._id, email: user.email };
+function generateToken(user, role) {
+  const payload = { id: user._id, email: user.email, role: role};
   const secret = process.env.JWT_SECRET || 'dev_secret_change_me';
   const expiresIn = '7d';
 
@@ -41,9 +42,11 @@ router.post('/register', async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      role: "user" // Explicitly set role
     });
 
-    const token = generateToken(user);
+    const role = "user";
+    const token = generateToken(user, role);
 
     res.status(201).json({
       message: 'User registered successfully',
@@ -80,7 +83,8 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const token = generateToken(user);
+    const role = "user"
+    const token = generateToken(user, role);
 
     res.json({
       message: 'Login successful',
@@ -133,10 +137,12 @@ router.post('/google', async (req, res) => {
         googleId,
         picture,
         provider: 'google',
+        role: 'user' // Explicitly set role for Google users
       });
     }
 
-    const jwtToken = generateToken(user);
+    const role = "user";
+    const jwtToken = generateToken(user, role);
 
     res.status(200).json({
       message: 'Google login successful',
@@ -165,28 +171,33 @@ router.post("/admin/login", async (req, res) => {
       return res.status(400).json({ message: "Email and password required" });
     }
 
-    // 🔎 Find admin user
-    const admin = await User.findOne({ email, role: "admin" });
+    console.log(req.body)
+    // 🔎 Find admin
+    const admin = await Admin.findOne({ email });
+
     if (!admin) {
       return res.status(401).json({ message: "Admin not found" });
     }
 
-    // ❌ Google admin cannot login with password
-    if (admin.provider === "google") {
-      return res.status(400).json({
-        message: "This admin account uses Google login",
-      });
+    if (!admin.isActive) {
+      return res.status(403).json({ message: "Admin account is deactivated" });
     }
 
+    // 🔐 Compare password (using model method if added)
     const isMatch = await bcrypt.compare(password, admin.password);
+
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // 🔑 JWT Token
-    const token = generateToken(admin);
-    
+    // Update last login
+    admin.lastLogin = new Date();
+    await admin.save();
 
+    const role = "admin";
+    // 🔑 Generate token
+    const token = generateToken(admin, role);
+    
     res.json({
       message: "Admin login successful",
       token,
@@ -194,15 +205,15 @@ router.post("/admin/login", async (req, res) => {
         id: admin._id,
         name: admin.name,
         email: admin.email,
-        role: admin.role,
+        role: role,
       },
     });
+
   } catch (error) {
-    console.error(error);
+    console.error("Admin login error:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
-
 
 module.exports = router;
 
