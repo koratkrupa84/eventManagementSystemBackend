@@ -15,6 +15,10 @@ const categoryRoutes = require('./routes/categoryRoutes');
 const galleryRoutes = require('./routes/galleryRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const inquiryRoutes = require('./routes/inquiryRoutes');
+const clientProfileRoutes = require('./routes/clientProfileRoutes');
+const publicEventRoutes = require('./routes/publicEventRoutes');
+const eventRegistrationRoutes = require('./routes/eventRegistrationRoutes');
+const homeRoutes = require('./routes/homeRoutes');
 
 const app = express();
 const PORT = process.env.PORT;
@@ -39,7 +43,12 @@ app.use('/admin/appointments', appointmentRoutes);
 app.use('/admin/categories', categoryRoutes);
 app.use('/admin/gallery', galleryRoutes);
 app.use('/admin/reviews', reviewRoutes);
+app.use('/reviews', reviewRoutes);
 app.use('/admin/inquiries', inquiryRoutes);
+app.use('/profile', clientProfileRoutes);
+app.use('/publicEvents', publicEventRoutes);
+app.use('/registrations', eventRegistrationRoutes);
+app.use('/home', homeRoutes);
 
 app.get('/', (req, res) => {
   res.send('Event Management API is running');

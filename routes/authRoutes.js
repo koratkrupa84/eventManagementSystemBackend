@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const User = require('../models/User');
+const UserProfile = require('../models/UserProfile');
 const Admin = require('../models/Admin');
 
 const router = express.Router();
@@ -42,10 +43,10 @@ router.post('/register', async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role: "user" // Explicitly set role
+      role: "client" // Default role is client
     });
 
-    const role = "user";
+    const role = user.role || "client";
     const token = generateToken(user, role);
 
     res.status(201).json({
@@ -83,7 +84,7 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const role = "user"
+    const role = user.role || "client";
     const token = generateToken(user, role);
 
     res.json({
@@ -137,11 +138,11 @@ router.post('/google', async (req, res) => {
         googleId,
         picture,
         provider: 'google',
-        role: 'user' // Explicitly set role for Google users
+        role: 'client' // Default role is client for Google users
       });
     }
 
-    const role = "user";
+    const role = user.role || "client";
     const jwtToken = generateToken(user, role);
 
     res.status(200).json({
@@ -212,6 +213,140 @@ router.post("/admin/login", async (req, res) => {
   } catch (error) {
     console.error("Admin login error:", error);
     res.status(500).json({ message: "Server error" });
+  }
+});
+
+// GET /auth/users - Get all users for dropdown
+router.get('/users', async (req, res) => {
+  try {
+    const users = await User.find({}, 'name email role isActive createdAt');
+    
+    // Get user profiles for additional details
+    const usersWithProfiles = await Promise.all(
+      users.map(async (user) => {
+        const profile = await UserProfile.findOne({ user_id: user._id });
+        return {
+          ...user.toObject(),
+          phone: profile?.phone || '',
+          address: profile?.address || '',
+          specialization: profile?.specialization || '',
+          experience: profile?.experience || '',
+          bio: profile?.bio || ''
+        };
+      })
+    );
+    
+    res.status(200).json({
+      success: true,
+      data: usersWithProfiles
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// POST /auth/users - Create new user
+router.post('/users', async (req, res) => {
+  try {
+    const { name, email, password, phone, role, specialization, experience, address, bio } = req.body;
+
+    if (!name || !email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name and email are required'
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: 'User with this email already exists'
+      });
+    }
+
+    // Hash password if provided, otherwise use default
+    let hashedPassword;
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      hashedPassword = await bcrypt.hash(password, salt);
+    } else {
+      const salt = await bcrypt.genSalt(10);
+      hashedPassword = await bcrypt.hash("default123", salt);
+    }
+
+    // Create new user
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: role || 'client'
+    });
+
+    // Create user profile with additional details
+    const profileData = {
+      user_id: user._id,
+      phone: phone || '',
+      address: address || '',
+      bio: bio || ''
+    };
+
+    // Add role-specific fields
+    if (role === 'organizer') {
+      profileData.specialization = specialization || '';
+      profileData.experience = experience || '';
+    } else if (role === 'client') {
+      profileData.preferences = '';
+    }
+
+    await UserProfile.create(profileData);
+
+    res.status(201).json({
+      success: true,
+      message: 'User created successfully',
+      data: user
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+});
+
+// DELETE /auth/users/:id - Delete user
+router.delete('/users/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if user exists
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Delete user profile first
+    await UserProfile.findOneAndDelete({ user_id: id });
+
+    // Delete user
+    await User.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'User deleted successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 });
 

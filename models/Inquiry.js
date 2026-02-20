@@ -5,28 +5,19 @@ const inquirySchema = new mongoose.Schema(
     name: {
       type: String,
       required: true,
+      maxlength: 100,
       trim: true
     },
     email: {
       type: String,
       required: true,
+      maxlength: 100,
       trim: true,
       lowercase: true
     },
-    subject: {
-      type: String,
-      required: true,
-      trim: true
-    },
     message: {
       type: String,
-      required: true,
-      trim: true
-    },
-    status: {
-      type: String,
-      enum: ['Pending', 'Replied', 'Resolved'],
-      default: 'Pending'
+      required: true
     }
   },
   {

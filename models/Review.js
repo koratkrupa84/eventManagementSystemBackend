@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const reviewSchema = new mongoose.Schema(
   {
+    client_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: false
+    },
     name: {
       type: String,
       required: true,
@@ -16,6 +21,10 @@ const reviewSchema = new mongoose.Schema(
     message: {
       type: String,
       required: true,
+      trim: true
+    },
+    review_text: {
+      type: String,
       trim: true
     },
     date: {

@@ -4,19 +4,17 @@ const packageSchema = new mongoose.Schema(
   {
     package_name: {
       type: String,
-      required: true
+      required: true,
+      maxlength: 50
     },
-
     price: {
       type: Number,
       required: true
     },
-
     services: {
       type: String,
       required: true
     },
-
     images: {
       type: [String],   // array of image URLs
       default: []       // optional

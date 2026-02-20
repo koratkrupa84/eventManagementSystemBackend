@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   getAllGalleryImages,
   addGalleryImage,
+  updateGalleryImage,
   deleteGalleryImage
 } = require('../controllers/galleryController');
 const { protect, isAdmin } = require('../middleware/authMiddleware');
@@ -20,6 +21,7 @@ router.post(
   upload.array('images', 10),
   addGalleryImage
 );
+router.put('/:id', protect, isAdmin, updateGalleryImage);
 router.delete('/:id', protect, isAdmin, deleteGalleryImage);
 
 module.exports = router;

@@ -2,17 +2,24 @@ const mongoose = require('mongoose');
 
 const gallerySchema = new mongoose.Schema(
   {
-    image: {
+    event_type: {
       type: String,
+      enum: ['public', 'private'],
       required: true
     },
-    title: {
-      type: String,
-      trim: true
+    event_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true
     },
-    description: {
+    image_path: {
       type: String,
-      trim: true
+      required: true,
+      maxlength: 255
+    },
+    uploaded_by: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
     }
   },
   {

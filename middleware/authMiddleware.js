@@ -101,8 +101,8 @@ const isAdmin = (req, res, next) => {
 };
 
 const isUser = (req, res, next) => {
-  // Allow any non-admin user (user, client, or any role that's not admin/superadmin)
-  if (req.user && req.user.role !== "user") {
+  // Allow client or organizer (non-admin users)
+  if (req.user && (req.user.role === "client" || req.user.role === "organizer")) {
     next();
   } else {
     res.status(403).json({ message: "Users only" });

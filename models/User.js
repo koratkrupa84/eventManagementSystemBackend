@@ -26,7 +26,13 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      default: 'user',
+      enum: ['client', 'organizer', 'admin'],
+      default: 'client',
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
     },
 
     googleId: {
