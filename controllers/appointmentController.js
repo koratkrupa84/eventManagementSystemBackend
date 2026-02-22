@@ -1,17 +1,73 @@
 const PrivateEventRequest = require('../models/PrivateEventRequest');
+const User = require('../models/User');
+const PrivateEvent = require('../models/PrivateEvent');
 
 // GET ALL APPOINTMENTS
 exports.getAllAppointments = async (req, res) => {
   try {
-    const appointments = await PrivateEventRequest.find()
+    console.log("=== GET ALL APPOINTMENTS DEBUG START ===");
+
+    // Import PrivateEvent mod
+
+    // Get ALL private event requests
+    const allRequests = await PrivateEventRequest.find({})
       .populate('client_id', 'name email')
       .sort({ createdAt: -1 });
-      
+
+    // Get ALL private events
+    const allPrivateEvents = await PrivateEvent.find({})
+      .populate('request_id', 'event_type event_date location guests budget')
+      .populate('organizer_id', 'name email')
+      .sort({ createdAt: -1 });
+
+    console.log("All requests found:", allRequests.length);
+    console.log("All private events found:", allPrivateEvents.length);
+
+    // Convert requests to appointment format
+    const requestAppointments = allRequests.map(request => ({
+      _id: request._id,
+      client_id: request.client_id,
+      event_type: request.event_type,
+      event_date: request.event_date,
+      location: request.location,
+      guests: request.guests,
+      budget: request.budget,
+      special_requirements: request.special_requirements,
+      status: request.status,
+      full_name: request.client_id?.name || 'Unknown Client',
+      createdAt: request.createdAt,
+      type: 'request'
+    }));
+
+    // Convert private events to appointment format
+    const eventAppointments = allPrivateEvents.map(event => ({
+      _id: event._id,
+      request_id: event.request_id,
+      organizer_id: event.organizer_id,
+      event_type: event.request_id?.event_type || 'Private Event',
+      event_date: event.event_date || event.request_id?.event_date,
+      location: event.location || event.request_id?.location,
+      guests: event.guests || event.request_id?.guests,
+      budget: event.budget || event.request_id?.budget,
+      details: event.details,
+      status: event.status || 'confirmed',
+      full_name: event.organizer_id?.name || 'Unknown Organizer',
+      createdAt: event.createdAt,
+      type: 'private_event'
+    }));
+
+    // Combine both arrays
+    const allAppointments = [...requestAppointments, ...eventAppointments];
+
+    console.log("Total appointments:", allAppointments.length);
+    console.log("=== GET ALL APPOINTMENTS DEBUG END ===");
+
     res.status(200).json({
       success: true,
-      data: appointments
+      data: allAppointments
     });
   } catch (error) {
+    console.log("ERROR in getAllAppointments:", error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -25,18 +81,26 @@ exports.updateAppointmentStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!['pending', 'approved', 'rejected', 'completed'].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid status'
-      });
-    }
+    // Import PrivateEvent model
+    const PrivateEvent = require('../models/PrivateEvent');
 
-    const appointment = await PrivateEventRequest.findByIdAndUpdate(
+    // First try to update PrivateEvent
+    let appointment = await PrivateEvent.findByIdAndUpdate(
       id,
       { status },
       { new: true }
-    );
+    ).populate('organizer_id', 'name email')
+      .populate('request_id', 'event_type event_date location guests budget');
+
+    // If not found in PrivateEvent, try PrivateEventRequest
+    if (!appointment) {
+      appointment = await PrivateEventRequest.findByIdAndUpdate(
+        id,
+        { status },
+        { new: true }
+      ).populate('client_id', 'name email')
+        .populate('organizer_id', 'name email');
+    }
 
     if (!appointment) {
       return res.status(404).json({
@@ -63,7 +127,16 @@ exports.deleteAppointment = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const appointment = await PrivateEventRequest.findByIdAndDelete(id);
+    // Import PrivateEvent model
+    const PrivateEvent = require('../models/PrivateEvent');
+
+    // First try to delete from PrivateEvent
+    let appointment = await PrivateEvent.findByIdAndDelete(id);
+
+    // If not found in PrivateEvent, try PrivateEventRequest
+    if (!appointment) {
+      appointment = await PrivateEventRequest.findByIdAndDelete(id);
+    }
 
     if (!appointment) {
       return res.status(404).json({
@@ -88,78 +161,66 @@ exports.deleteAppointment = async (req, res) => {
 exports.createAppointment = async (req, res) => {
   try {
     const {
-      client_id,
-      event_type,
-      event_date,
-      location,
+      request_id,
+      organizer_id,
+      details,
       guests,
       budget,
-      special_requirements
+      location,
+      event_date,
+      status
     } = req.body;
 
+    console.log("=== CREATE PRIVATE EVENT DEBUG START ===");
+    console.log("Request data:", { request_id, organizer_id, details, guests, budget, location, event_date, status });
+
+    // Import PrivateEvent model
+    const PrivateEvent = require('../models/PrivateEvent');
+
     // Validate required fields
-    if (!event_type) {
+    if (!request_id) {
       return res.status(400).json({
         success: false,
-        message: 'Event type is required'
+        message: 'Request ID is required'
       });
     }
 
-    if (!event_date) {
+    if (!organizer_id) {
       return res.status(400).json({
         success: false,
-        message: 'Event date is required'
+        message: 'Organizer ID is required'
       });
     }
 
-    if (!location) {
-      return res.status(400).json({
-        success: false,
-        message: 'Location is required'
-      });
-    }
+    // Create PrivateEvent using PrivateEvent model with all fields
+    const privateEvent = await PrivateEvent.create({
+      request_id,
+      organizer_id,
+      details: details || 'Private Event',
+      guests: guests || null,
+      budget: budget || null,
+      location: location || null,
+      event_date: event_date || null,
+      status: status || 'confirmed'
+    });
 
-    // Validate client exists (only if client_id is provided and not a backend entry)
-    if (client_id && client_id !== "backend_user_id") {
-      const User = require('../models/User');
-      const client = await User.findById(client_id);
-      if (!client) {
-        return res.status(404).json({
-          success: false,
-          message: 'Client not found'
-        });
-      }
-    }
+    // Also update the original request status to confirmed
+    await PrivateEventRequest.findByIdAndUpdate(
+      request_id,
+      { status: 'confirmed' },
+      { new: true }
+    );
 
-    const appointmentData = {
-      event_type,
-      event_date,
-      location,
-      guests: guests ? Number(guests) : undefined,
-      budget: budget ? Number(budget) : undefined,
-      special_requirements,
-      status: 'pending'
-    };
-
-    // Only add client_id if it's provided and not a backend entry
-    if (client_id && client_id !== "backend_user_id") {
-      appointmentData.client_id = client_id;
-    }
-
-    const appointment = new PrivateEventRequest(appointmentData);
-    await appointment.save();
-
-    // Populate client info for response if client_id exists
-    if (appointmentData.client_id) {
-      await appointment.populate('client_id', 'name email');
-    }
+    console.log("PrivateEvent created:", privateEvent);
+    console.log("=== CREATE PRIVATE EVENT DEBUG END ===");
 
     res.status(201).json({
       success: true,
-      message: 'Appointment created successfully',
-      data: appointment
+      message: 'Private event created successfully',
+      data: privateEvent
     });
   } catch (error) {
+    console.log("ERROR in createAppointment:", error);
     res.status(500).json({
       success: false,
       message: error.message

@@ -1,13 +1,24 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
+const { protect } = require("../middleware/authMiddleware");
+
 const {
   getClientProfile,
-  createOrUpdateProfile
-} = require('../controllers/clientProfileController');
-const { protect } = require('../middleware/authMiddleware');
+  getClientAppointments,
+  bookPrivateEvent,
+  updateProfile
+} = require("../controllers/clientProfileController");
 
-router.get('/', protect, getClientProfile);
-router.post('/', protect, createOrUpdateProfile);
-router.put('/', protect, createOrUpdateProfile);
+// GET PROFILE
+router.get("/", protect, getClientProfile);
+
+// GET APPOINTMENTS
+router.get("/appointments", protect, getClientAppointments);
+
+// BOOK EVENT
+router.post("/private-event-booking", protect, bookPrivateEvent);
+
+// UPDATE PROFILE
+router.put("/update/:id", protect, updateProfile);
 
 module.exports = router;

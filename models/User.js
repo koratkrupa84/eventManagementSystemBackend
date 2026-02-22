@@ -19,14 +19,14 @@ const userSchema = new mongoose.Schema(
     password: {
       type: String,
       required: function () {
-        return !this.googleId; // ✅ Google user → no password
+        return !this.googleId; // ✅ Only require password if NOT Google user
       },
       minlength: 6,
     },
 
     role: {
       type: String,
-      enum: ['client', 'organizer', 'admin'],
+      enum: ['client', 'organizer'],
       default: 'client',
     },
 

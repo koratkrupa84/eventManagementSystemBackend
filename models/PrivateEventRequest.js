@@ -4,7 +4,7 @@ const privateEventRequestSchema = new mongoose.Schema({
   client_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: false
+    required: true
   },
   event_type: {
     type: String,
