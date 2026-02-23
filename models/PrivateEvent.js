@@ -9,12 +9,29 @@ const privateEventSchema = new mongoose.Schema(
     },
     organizer_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Organizer',
       required: true
     },
     details: {
       type: String,
       required: true
+    },
+    guests: {
+      type: Number
+    },
+    budget: {
+      type: Number
+    },
+    location: {
+      type: String
+    },
+    event_date: {
+      type: Date
+    },
+    status: {
+      type: String,
+      enum: ["pending", "confirmed", "completed", "cancelled"],
+      default: "confirmed"
     }
   },
   {

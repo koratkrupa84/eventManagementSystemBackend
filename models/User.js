@@ -46,6 +46,12 @@ const userSchema = new mongoose.Schema(
       enum: ['local', 'google'],
       default: 'local',
     },
+
+    // Reference to client profile for client users
+    clientProfile: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'ClientProfile'
+    }
   },
   {
     timestamps: true,

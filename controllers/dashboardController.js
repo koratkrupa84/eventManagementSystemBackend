@@ -2,6 +2,7 @@ const PrivateEventRequest = require('../models/PrivateEventRequest');
 const Package = require('../models/Package');
 const Category = require('../models/Category');
 const Review = require('../models/Review');
+const Organizer = require('../models/Organizer');
 
 // GET DASHBOARD STATS
 exports.getDashboardStats = async (req, res) => {
@@ -11,12 +12,16 @@ exports.getDashboardStats = async (req, res) => {
       totalPackages,
       totalCategories,
       totalReviews,
+      totalOrganizers,
+      activeOrganizers,
       recentAppointments
     ] = await Promise.all([
       PrivateEventRequest.countDocuments(),
       Package.countDocuments(),
       Category.countDocuments(),
       Review.countDocuments({ isActive: true }),
+      Organizer.countDocuments(),
+      Organizer.countDocuments({ isActive: true }),
       PrivateEventRequest.find()
         .sort({ created_at: -1 })
         .limit(5)
@@ -31,7 +36,9 @@ exports.getDashboardStats = async (req, res) => {
           totalAppointments,
           totalPackages,
           totalCategories,
-          totalReviews
+          totalReviews,
+          totalOrganizers,
+          activeOrganizers
         },
         recentAppointments: recentAppointments.map(apt => ({
           id: apt._id,
