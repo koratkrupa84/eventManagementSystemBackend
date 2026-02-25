@@ -1,5 +1,50 @@
 const Inquiry = require('../models/Inquiry');
 
+// CREATE INQUIRY
+exports.createInquiry = async (req, res) => {
+  try {
+    const { name, email, message } = req.body;
+
+    // Validation
+    if (!name || !email || !message) {
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
+      });
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please enter a valid email address'
+      });
+    }
+
+    // Create new inquiry
+    const inquiry = new Inquiry({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      message: message.trim()
+    });
+
+    const savedInquiry = await inquiry.save();
+
+    res.status(201).json({
+      success: true,
+      message: 'Inquiry submitted successfully',
+      data: savedInquiry
+    });
+  } catch (error) {
+    console.error('Error creating inquiry:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to submit inquiry'
+    });
+  }
+};
+
 // GET ALL INQUIRIES
 exports.getAllInquiries = async (req, res) => {
   try {

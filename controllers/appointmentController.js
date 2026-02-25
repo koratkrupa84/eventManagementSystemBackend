@@ -16,12 +16,27 @@ exports.getAllAppointments = async (req, res) => {
 
     // Get ALL private events
     const allPrivateEvents = await PrivateEvent.find({})
-      .populate('request_id', 'event_type event_date location guests budget')
-      .populate('organizer_id', 'name email')
+      .populate({
+        path: 'request_id',
+        populate: {
+          path: 'client_id',
+          select: 'name email'
+        },
+        select: 'event_type event_date location guests budget client_id'
+      })
+      .populate('client_id', 'name email')
+      .populate('organizer_id', 'name email phone company specialization experience')
       .sort({ createdAt: -1 });
 
     console.log("All requests found:", allRequests.length);
     console.log("All private events found:", allPrivateEvents.length);
+    
+    // Debug: Check first event data
+    if (allPrivateEvents.length > 0) {
+      console.log("First event data:", JSON.stringify(allPrivateEvents[0], null, 2));
+      console.log("First event request_id:", allPrivateEvents[0].request_id);
+      console.log("First event client_id:", allPrivateEvents[0].request_id?.client_id);
+    }
 
     // Convert requests to appointment format
     const requestAppointments = allRequests.map(request => ({
@@ -43,7 +58,9 @@ exports.getAllAppointments = async (req, res) => {
     const eventAppointments = allPrivateEvents.map(event => ({
       _id: event._id,
       request_id: event.request_id,
+      client_id: event.request_id?.client_id,
       organizer_id: event.organizer_id,
+      organizer: event.organizer_id, // Add organizer object
       event_type: event.request_id?.event_type || 'Private Event',
       event_date: event.event_date || event.request_id?.event_date,
       location: event.location || event.request_id?.location,
@@ -51,7 +68,7 @@ exports.getAllAppointments = async (req, res) => {
       budget: event.budget || event.request_id?.budget,
       details: event.details,
       status: event.status || 'confirmed',
-      full_name: event.organizer_id?.name || 'Unknown Organizer',
+      full_name: event.request_id?.client_id?.name || 'Unknown Client',
       createdAt: event.createdAt,
       type: 'private_event'
     }));
@@ -89,8 +106,7 @@ exports.updateAppointmentStatus = async (req, res) => {
       id,
       { status },
       { new: true }
-    ).populate('organizer_id', 'name email')
-      .populate('request_id', 'event_type event_date location guests budget');
+    ).populate('request_id', 'event_type event_date location guests budget');
 
     // If not found in PrivateEvent, try PrivateEventRequest
     if (!appointment) {
@@ -98,8 +114,7 @@ exports.updateAppointmentStatus = async (req, res) => {
         id,
         { status },
         { new: true }
-      ).populate('client_id', 'name email')
-        .populate('organizer_id', 'name email');
+      ).populate('client_id', 'name email');
     }
 
     if (!appointment) {
@@ -115,6 +130,79 @@ exports.updateAppointmentStatus = async (req, res) => {
       data: appointment
     });
   } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// UPDATE APPOINTMENT (Complete Update)
+exports.updateAppointment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    // Import PrivateEvent model
+    const PrivateEvent = require('../models/PrivateEvent');
+
+    // First try to update PrivateEvent
+    let appointment = await PrivateEvent.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    ).populate({
+      path: 'request_id',
+      populate: {
+        path: 'client_id',
+        select: 'name email'
+      },
+      select: 'event_type event_date location guests budget client_id'
+    })
+     .populate('organizer_id', 'name email phone company specialization experience');
+
+    // If not found in PrivateEvent, try PrivateEventRequest
+    if (!appointment) {
+      appointment = await PrivateEventRequest.findByIdAndUpdate(
+        id,
+        updateData,
+        { new: true }
+      ).populate('client_id', 'name email');
+    }
+
+    if (!appointment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found'
+      });
+    }
+
+    // Format response data for frontend
+    const responseData = {
+      _id: appointment._id,
+      request_id: appointment.request_id,
+      client_id: appointment.request_id?.client_id,
+      organizer_id: appointment.organizer_id,
+      organizer: appointment.organizer_id,
+      event_type: appointment.request_id?.event_type || 'Private Event',
+      event_date: appointment.event_date || appointment.request_id?.event_date,
+      location: appointment.location || appointment.request_id?.location,
+      guests: appointment.guests || appointment.request_id?.guests,
+      budget: appointment.budget || appointment.request_id?.budget,
+      details: appointment.details,
+      status: appointment.status || 'confirmed',
+      full_name: appointment.request_id?.client_id?.name || 'Unknown Client',
+      createdAt: appointment.createdAt,
+      type: 'private_event'
+    };
+
+    res.status(200).json({
+      success: true,
+      message: 'Appointment updated successfully',
+      data: responseData
+    });
+  } catch (error) {
+    console.log("UPDATE APPOINTMENT ERROR:", error);
     res.status(500).json({
       success: false,
       message: error.message

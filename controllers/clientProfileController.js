@@ -34,15 +34,59 @@ exports.getClientProfile = async (req, res) => {
 ================================= */
 exports.getClientAppointments = async (req, res) => {
   try {
+    console.log("=== GET CLIENT APPOINTMENTS DEBUG START ===");
+    console.log("User ID:", req.user._id);
+    
+    // Get client's private event requests with organizer data
     const appointments = await PrivateEventRequest.find({
       client_id: req.user._id
-    }).sort({ createdAt: -1 });
+    })
+    .populate({
+      path: 'client_id',
+      select: 'name email'
+    })
+    .sort({ createdAt: -1 });
+
+    console.log("Found appointments:", appointments.length);
+
+    // Also get confirmed private events with organizer data
+    const PrivateEvent = require('../models/PrivateEvent');
+    const confirmedEvents = await PrivateEvent.find({
+      client_id: req.user._id
+    })
+    .populate('organizer_id', 'name email phone company specialization experience')
+    .populate('request_id', 'event_type event_date location guests budget special_requirements')
+    .sort({ createdAt: -1 });
+
+    console.log("Found confirmed events:", confirmedEvents.length);
+
+    // Convert confirmed events to appointment format with organizer data
+    const confirmedAppointments = confirmedEvents.map(event => ({
+      _id: event._id,
+      event_type: event.request_id?.event_type || 'Private Event',
+      event_date: event.event_date || event.request_id?.event_date,
+      location: event.location || event.request_id?.location,
+      guests: event.guests || event.request_id?.guests,
+      budget: event.budget || event.request_id?.budget,
+      special_requirements: event.request_id?.special_requirements,
+      status: 'confirmed',
+      organizer: event.organizer_id, // Add organizer object
+      createdAt: event.createdAt,
+      type: 'private_event'
+    }));
+
+    // Combine both arrays
+    const allAppointments = [...appointments, ...confirmedAppointments];
+
+    console.log("Total appointments:", allAppointments.length);
+    console.log("=== GET CLIENT APPOINTMENTS DEBUG END ===");
 
     res.json({
       success: true,
-      data: appointments
+      data: allAppointments
     });
   } catch (error) {
+    console.log("Error in getClientAppointments:", error);
     res.status(500).json({
       success: false,
       message: "Appointments fetch failed"

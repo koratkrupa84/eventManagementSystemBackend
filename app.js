@@ -23,6 +23,7 @@ const requestRoutes = require('./routes/requestRoutes');
 const organizerRoutes = require('./routes/organizerRoutes');
 const adminOrganizerRoutes = require('./routes/adminOrganizerRoutes');
 const adminClientRoutes = require('./routes/adminClientRoutes');
+const blogRoutes = require('./routes/blogRoutes');
 
 const app = express();
 const PORT = process.env.PORT;
@@ -57,6 +58,8 @@ app.use('/admin/requests', requestRoutes);
 app.use('/organizer', organizerRoutes);
 app.use('/admin/organizers', adminOrganizerRoutes);
 app.use('/admin/clients', adminClientRoutes);
+app.use('/admin/blogs', blogRoutes);
+app.use('/blogs', blogRoutes);
 
 app.get('/', (req, res) => {
   res.send('Event Management API is running');

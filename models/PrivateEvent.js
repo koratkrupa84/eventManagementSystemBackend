@@ -7,6 +7,11 @@ const privateEventSchema = new mongoose.Schema(
       ref: 'PrivateEventRequest',
       required: true
     },
+    client_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
     organizer_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Organizer',

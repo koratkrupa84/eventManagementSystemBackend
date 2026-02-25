@@ -13,6 +13,46 @@ const categorySchema = new mongoose.Schema(
     },
     image: {
       type: String
+    },
+    features: [{
+      type: String,
+      trim: true
+    }],
+    priceRange: {
+      min: {
+        type: Number,
+        default: 0
+      },
+      max: {
+        type: Number,
+        default: 0
+      }
+    },
+    duration: {
+      type: String,
+      trim: true
+    },
+    capacity: {
+      min: {
+        type: Number,
+        default: 0
+      },
+      max: {
+        type: Number,
+        default: 0
+      }
+    },
+    includedServices: [{
+      type: String,
+      trim: true
+    }],
+    additionalInfo: {
+      type: String,
+      trim: true
+    },
+    isActive: {
+      type: Boolean,
+      default: true
     }
   },
   {

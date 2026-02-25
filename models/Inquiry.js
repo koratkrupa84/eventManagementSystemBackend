@@ -18,6 +18,11 @@ const inquirySchema = new mongoose.Schema(
     message: {
       type: String,
       required: true
+    },
+    status: {
+      type: String,
+      enum: ['Pending', 'Replied', 'Resolved'],
+      default: 'Pending'
     }
   },
   {

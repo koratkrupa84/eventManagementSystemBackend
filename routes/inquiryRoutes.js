@@ -4,10 +4,12 @@ const {
   getAllInquiries,
   getInquiry,
   updateInquiryStatus,
-  deleteInquiry
+  deleteInquiry,
+  createInquiry
 } = require('../controllers/inquiryController');
 const { protect, isAdmin } = require('../middleware/authMiddleware');
 
+router.post('/', createInquiry);
 router.get('/', protect, isAdmin, getAllInquiries);
 router.get('/:id', protect, isAdmin, getInquiry);
 router.put('/:id/status', protect, isAdmin, updateInquiryStatus);

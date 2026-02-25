@@ -21,7 +21,18 @@ exports.getAllCategories = async (req, res) => {
 // ADD CATEGORY
 exports.addCategory = async (req, res) => {
   try {
-    const { title, description } = req.body;
+    const { 
+      title, 
+      description, 
+      features, 
+      priceRange, 
+      duration, 
+      capacity, 
+      includedServices, 
+      additionalInfo,
+      isActive 
+    } = req.body;
+    
     const image = req.file ? req.file.path.replace(/\\/g, "/") : undefined;
 
     if (!title) {
@@ -34,7 +45,14 @@ exports.addCategory = async (req, res) => {
     const category = new Category({
       title,
       description,
-      image
+      image,
+      features: features ? (Array.isArray(features) ? features : JSON.parse(features || '[]')) : [],
+      priceRange: priceRange ? (typeof priceRange === 'string' ? JSON.parse(priceRange) : priceRange) : { min: 0, max: 0 },
+      duration: duration || '',
+      capacity: capacity ? (typeof capacity === 'string' ? JSON.parse(capacity) : capacity) : { min: 0, max: 0 },
+      includedServices: includedServices ? (Array.isArray(includedServices) ? includedServices : JSON.parse(includedServices || '[]')) : [],
+      additionalInfo: additionalInfo || '',
+      isActive: isActive !== undefined ? isActive : true
     });
 
     await category.save();
@@ -45,6 +63,7 @@ exports.addCategory = async (req, res) => {
       data: category
     });
   } catch (error) {
+    console.log('Add category error:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -56,7 +75,18 @@ exports.addCategory = async (req, res) => {
 exports.updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, removedImage } = req.body;
+    const { 
+      title, 
+      description, 
+      removedImage, 
+      features, 
+      priceRange, 
+      duration, 
+      capacity, 
+      includedServices, 
+      additionalInfo,
+      isActive 
+    } = req.body;
 
     const category = await Category.findById(id);
     if (!category) {
@@ -83,6 +113,21 @@ exports.updateCategory = async (req, res) => {
     // Update fields
     if (title) category.title = title;
     if (description !== undefined) category.description = description;
+    if (features !== undefined) {
+      category.features = Array.isArray(features) ? features : JSON.parse(features || '[]');
+    }
+    if (priceRange !== undefined) {
+      category.priceRange = typeof priceRange === 'string' ? JSON.parse(priceRange) : priceRange;
+    }
+    if (duration !== undefined) category.duration = duration;
+    if (capacity !== undefined) {
+      category.capacity = typeof capacity === 'string' ? JSON.parse(capacity) : capacity;
+    }
+    if (includedServices !== undefined) {
+      category.includedServices = Array.isArray(includedServices) ? includedServices : JSON.parse(includedServices || '[]');
+    }
+    if (additionalInfo !== undefined) category.additionalInfo = additionalInfo;
+    if (isActive !== undefined) category.isActive = isActive;
 
     await category.save();
 
@@ -92,6 +137,7 @@ exports.updateCategory = async (req, res) => {
       data: category
     });
   } catch (error) {
+    console.log('Update category error:', error);
     res.status(500).json({
       success: false,
       message: error.message
