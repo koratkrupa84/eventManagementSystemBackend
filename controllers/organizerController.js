@@ -2,6 +2,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { OAuth2Client } = require('google-auth-library');
 const Organizer = require('../models/Organizer');
+const PrivateEvent = require('../models/PrivateEvent');
+const PrivateEventRequest = require('../models/PrivateEventRequest');
+const User = require('../models/User');
+const ClientProfile = require('../models/ClientProfile');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -106,7 +110,7 @@ const registerOrganizer = async (req, res) => {
     console.error('Organizer registration error:', error);
     
     // Handle specific validation errors
-    if (error.name === 'ValidationError') {
+    if (error.name === 'Validati onError') {
       const errors = Object.values(error.errors).map(err => err.message);
       return res.status(400).json({ 
         message: 'Validation failed', 
@@ -499,6 +503,196 @@ const getEventPhotos = async (req, res) => {
   }
 };
 
+// ================= GET ORGANIZER APPOINTMENTS =================
+const getOrganizerAppointments = async (req, res) => {
+  try {
+    console.log("=== GET ORGANIZER APPOINTMENTS DEBUG START ===");
+    console.log("Organizer ID:", req.organizer.id);
+    console.log("Organizer Email:", req.organizer.email);
+
+    // Get private events assigned to this organizer
+    const organizerEvents = await PrivateEvent.find({ 
+      organizer_id: req.organizer.id 
+    })
+      .populate({
+        path: 'request_id',
+        populate: {
+          path: 'client_id',
+          select: 'name email'
+        },
+        select: 'event_type event_date location guests budget client_id'
+      })
+      .populate('client_id', 'name email')
+      .sort({ createdAt: -1 });
+
+    console.log("Organizer events found:", organizerEvents.length);
+
+    // Convert events to appointment format
+    const appointments = organizerEvents.map(event => ({
+      _id: event._id,
+      clientName: event.client_id?.name || event.request_id?.client_id?.name || 'Unknown Client',
+      clientEmail: event.client_id?.email || event.request_id?.client_id?.email || 'unknown@example.com',
+      date: event.event_date || event.createdAt,
+      service: event.event_type || 'Private Event',
+      status: event.status || 'confirmed',
+      eventType: event.event_type,
+      location: event.location,
+      guests: event.guests,
+      budget: event.budget,
+      organizer_id: event.organizer_id,
+      request_id: event.request_id
+    }));
+
+    console.log("Formatted appointments:", appointments.length);
+    console.log("=== GET ORGANIZER APPOINTMENTS DEBUG END ===");
+
+    res.status(200).json({
+      success: true,
+      data: appointments
+    });
+  } catch (error) {
+    console.error('Error fetching organizer appointments:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch appointments',
+      error: error.message
+    });
+  }
+};
+
+// ================= UPDATE APPOINTMENT STATUS =================
+const updateAppointmentStatus = async (req, res) => {
+  try {
+    console.log("=== UPDATE APPOINTMENT STATUS DEBUG START ===");
+    console.log("Appointment ID:", req.params.id);
+    console.log("New Status:", req.body.status);
+    console.log("Organizer ID:", req.organizer.id);
+
+    const { status } = req.body;
+    const appointmentId = req.params.id;
+
+    // Find the private event and ensure it belongs to this organizer
+    const event = await PrivateEvent.findOne({
+      _id: appointmentId,
+      organizer_id: req.organizer.id
+    });
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: 'Appointment not found or you do not have permission to update it'
+      });
+    }
+
+    // Update the event status
+    event.status = status;
+    await event.save();
+
+    console.log("Event status updated successfully");
+    console.log("=== UPDATE APPOINTMENT STATUS DEBUG END ===");
+
+    res.status(200).json({
+      success: true,
+      message: 'Appointment status updated successfully',
+      data: event
+    });
+  } catch (error) {
+    console.error('Error updating appointment status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update appointment status',
+      error: error.message
+    });
+  }
+};
+
+// ================= GET ORGANIZER CLIENTS =================
+const getOrganizerClients = async (req, res) => {
+  try {
+    console.log("=== GET ORGANIZER CLIENTS DEBUG START ===");
+    console.log("Organizer ID:", req.organizer.id);
+
+    // Get private events assigned to this organizer
+    const organizerEvents = await PrivateEvent.find({ 
+      organizer_id: req.organizer.id 
+    })
+      .populate({
+        path: 'client_id',
+        select: 'name email role clientProfile',
+        populate: {
+          path: 'clientProfile',
+          select: 'phone address'
+        }
+      })
+      .populate({
+        path: 'request_id',
+        populate: {
+          path: 'client_id',
+          select: 'name email role clientProfile',
+          populate: {
+            path: 'clientProfile',
+            select: 'phone address'
+          }
+        }
+      });
+
+    console.log("Organizer events found:", organizerEvents.length);
+
+    // Extract unique clients from events
+    const clientsMap = new Map();
+    
+    organizerEvents.forEach(event => {
+      // Try to get client from client_id first
+      if (event.client_id) {
+        const clientId = event.client_id._id || event.client_id;
+        if (!clientsMap.has(clientId.toString())) {
+          const clientProfile = event.client_id.clientProfile;
+          clientsMap.set(clientId.toString(), {
+            _id: clientId,
+            name: event.client_id.name || 'Unknown Client',
+            email: event.client_id.email || 'unknown@example.com',
+            phone: clientProfile?.phone || 'N/A',
+            address: clientProfile?.address || 'N/A',
+            createdAt: event.client_id.createdAt || new Date()
+          });
+        }
+      }
+      
+      // Fallback to request_id.client_id
+      if (event.request_id && event.request_id.client_id) {
+        const clientId = event.request_id.client_id._id || event.request_id.client_id;
+        if (!clientsMap.has(clientId.toString())) {
+          const clientProfile = event.request_id.client_id.clientProfile;
+          clientsMap.set(clientId.toString(), {
+            _id: clientId,
+            name: event.request_id.client_id.name || 'Unknown Client',
+            email: event.request_id.client_id.email || 'unknown@example.com',
+            phone: clientProfile?.phone || 'N/A',
+            address: clientProfile?.address || 'N/A',
+            createdAt: event.request_id.client_id.createdAt || new Date()
+          });
+        }
+      }
+    });
+
+    const clients = Array.from(clientsMap.values());
+    console.log("Unique clients found:", clients.length);
+    console.log("=== GET ORGANIZER CLIENTS DEBUG END ===");
+
+    res.status(200).json({
+      success: true,
+      data: clients
+    });
+  } catch (error) {
+    console.error('Error fetching organizer clients:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch clients',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   registerOrganizer,
   loginOrganizer,
@@ -508,5 +702,8 @@ module.exports = {
   uploadEventPhotos,
   uploadEventPhoto,
   deleteEventPhoto,
-  getEventPhotos
+  getEventPhotos,
+  getOrganizerAppointments,
+  updateAppointmentStatus,
+  getOrganizerClients
 };

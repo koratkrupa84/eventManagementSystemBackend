@@ -27,15 +27,16 @@ const protect = async (req, res, next) => {
         console.log("Admin user found:", req.user);
       } else if (decoded.role === "organizer") {
         console.log("Looking for organizer with ID:", decoded.id);
-        req.user = await Organizer.findById(decoded.id).select("-password");
-        console.log("Organizer user found:", req.user);
+        req.organizer = await Organizer.findById(decoded.id).select("-password");
+        req.user = req.organizer; // Also set req.user for compatibility
+        console.log("Organizer user found:", req.organizer);
       } else {
         console.log("Looking for user with ID:", decoded.id);
         req.user = await User.findById(decoded.id).select("-password");
         console.log("Regular user found:", req.user);
       }
 
-      if (!req.user) {
+      if (!req.user && !req.organizer) {
         console.log("ERROR: User not found in database");
         return res.status(401).json({ message: "User not found" });
       }

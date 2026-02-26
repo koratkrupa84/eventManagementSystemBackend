@@ -98,51 +98,74 @@ exports.adminCreatePrivateEventRequest = async (req, res) => {
 // CREATE PRIVATE EVENT FROM APPROVED REQUEST
 exports.createPrivateEvent = async (req, res) => {
   try {
-    const { requestId, details } = req.body;
-
-    if (!requestId || !details) {
+    console.log('Request body received:', req.body);
+    
+    const { request_id, client_id, clientName, organizer_id, details, guests, budget, location, event_date, special_requirements, package_id } = req.body;
+    
+    console.log('Extracted client_id:', client_id);
+    console.log('Extracted clientName:', clientName);
+    
+    if (!request_id || !details) {
       return res.status(400).json({
         success: false,
         message: "Request ID and details are required"
       });
     }
 
-    const request = await PrivateEventRequest.findById(requestId);
-    if (!request) {
-      return res.status(404).json({
+    if (!req.user || !req.user._id) {
+      return res.status(401).json({
         success: false,
-        message: "Request not found"
+        message: "User authentication required"
       });
     }
 
-    if (request.status !== 'approved') {
+    const request = await PrivateEventRequest.findById(request_id);
+    if (!request || request.status !== 'approved') {
       return res.status(400).json({
         success: false,
-        message: "Only approved requests can be converted to events"
+        message: "Request not found or not approved"
       });
     }
 
-    if (req.user.role !== 'organizer' && req.user.role !== 'admin' && req.user.role !== 'superadmin') {
-      return res.status(403).json({
+    // Get client_id from the request object if not provided in body
+    const actualClientId = client_id || request.client_id;
+    console.log('Actual client_id from request:', actualClientId);
+    
+    if (!actualClientId) {
+      return res.status(400).json({
         success: false,
-        message: "Only organizers and admins can create private events"
+        message: "Client ID is required but not found"
       });
     }
 
+    // Create private event with proper client reference
     const privateEvent = new PrivateEvent({
-      request_id: requestId,
-      organizer_id: req.user._id,
-      details
+      request_id: request._id,
+      client_id: actualClientId,  // Use client_id from request object
+      clientName: clientName,  // Client name for display
+      organizer_id: organizer_id,
+      details: details,
+      guests: guests ? Number(guests) : undefined,
+      budget: budget ? Number(budget) : undefined,
+      location: location,
+      event_date: event_date,
+      special_requirements: special_requirements || undefined,
+      package_id: package_id || undefined,
+      status: "confirmed"
     });
 
+    console.log('Private event to save:', privateEvent);
     await privateEvent.save();
-
+    
+    console.log('Private event saved successfully');
+    
     res.status(201).json({
       success: true,
       message: "Private event created successfully",
       data: privateEvent
     });
   } catch (error) {
+    console.error('Error creating private event:', error);
     res.status(500).json({
       success: false,
       message: error.message

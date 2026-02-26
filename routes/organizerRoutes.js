@@ -8,7 +8,10 @@ const {
   uploadEventPhotos,
   uploadEventPhoto,
   deleteEventPhoto,
-  getEventPhotos
+  getEventPhotos,
+  getOrganizerAppointments,
+  updateAppointmentStatus,
+  getOrganizerClients
 } = require('../controllers/organizerController');
 const { protect } = require('../middleware/authMiddleware');
 const upload = require('../middleware/upload');
@@ -57,5 +60,14 @@ router.delete('/profile/delete-event-photo/:photoIndex', protect, deleteEventPho
 
 // GET /organizer/profile/event-photos - Get all event photos
 router.get('/profile/event-photos', protect, getEventPhotos);
+
+// GET /organizer/appointments - Get organizer's appointments
+router.get('/appointments', protect, getOrganizerAppointments);
+
+// PUT /organizer/appointments/:id - Update appointment status
+router.put('/appointments/:id', protect, updateAppointmentStatus);
+
+// GET /organizer/clients - Get organizer's clients
+router.get('/clients', protect, getOrganizerClients);
 
 module.exports = router;
