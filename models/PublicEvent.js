@@ -22,12 +22,6 @@ const publicEventSchema = new mongoose.Schema(
       maxlength: 150,
       trim: true
     },
-    category: {
-      type: String,
-      required: true,
-      maxlength: 50,
-      trim: true
-    },
     status: {
       type: String,
       enum: ['upcoming', 'completed'],
@@ -36,6 +30,10 @@ const publicEventSchema = new mongoose.Schema(
     created_by: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+      required: true
+    },
+    image: {
+      type: String,
       required: true
     }
   },

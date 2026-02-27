@@ -5,6 +5,7 @@ const PublicEvent = require('../models/PublicEvent');
 exports.registerForEvent = async (req, res) => {
   try {
     const { eventId } = req.params;
+    const { total_persons = 1, registration_date } = req.body;
 
     if (!req.user || req.user.role !== 'client') {
       return res.status(403).json({
@@ -36,14 +37,17 @@ exports.registerForEvent = async (req, res) => {
 
     const registration = new EventRegistration({
       event_id: eventId,
-      user_id: req.user._id
+      user_id: req.user._id,
+      total_Parson: total_persons,
+      registration_date: registration_date || new Date(),
+      status: 'pending'
     });
 
     await registration.save();
 
     res.status(201).json({
       success: true,
-      message: 'Registered for event successfully',
+      message: 'Event registration successful!',
       data: registration
     });
   } catch (error) {
@@ -122,6 +126,102 @@ exports.getEventRegistrations = async (req, res) => {
     res.status(200).json({
       success: true,
       data: registrations
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// GET ALL EVENT REGISTRATIONS (Admin only)
+exports.getAllEventRegistrations = async (req, res) => {
+  try {
+    const { status, eventId } = req.query;
+    const filter = {};
+    
+    if (eventId) filter.event_id = eventId;
+
+    let registrations = await EventRegistration.find(filter)
+      .populate('event_id', 'title event_date location status')
+      .populate('user_id', 'name email phone')
+      .sort({ createdAt: -1 });
+
+    // Filter by event status if provided
+    if (status) {
+      registrations = registrations.filter(reg => 
+        reg.event_id && reg.event_id.status === status
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      data: registrations
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// UPDATE REGISTRATION STATUS (Admin only)
+exports.updateRegistrationStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!['pending', 'approved', 'rejected'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid status. Must be pending, approved, or rejected'
+      });
+    }
+
+    const registration = await EventRegistration.findById(id);
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Registration not found'
+      });
+    }
+
+    registration.status = status;
+    await registration.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Registration status updated to ${status}`,
+      data: registration
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// DELETE REGISTRATION (Admin only)
+exports.deleteRegistration = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const registration = await EventRegistration.findById(id);
+    if (!registration) {
+      return res.status(404).json({
+        success: false,
+        message: 'Registration not found'
+      });
+    }
+
+    await EventRegistration.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Registration deleted successfully'
     });
   } catch (error) {
     res.status(500).json({

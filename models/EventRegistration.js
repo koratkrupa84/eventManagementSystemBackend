@@ -11,6 +11,19 @@ const eventRegistrationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true
+    },
+    total_Parson:{
+      type: Number,
+      required: true
+    },
+    registration_date: {
+      type: Date,
+      default: Date.now
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending'
     }
   },
   {

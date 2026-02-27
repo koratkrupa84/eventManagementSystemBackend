@@ -3,15 +3,14 @@ const PublicEvent = require('../models/PublicEvent');
 // GET ALL PUBLIC EVENTS
 exports.getAllPublicEvents = async (req, res) => {
   try {
-    const { status, category } = req.query;
+    const { status } = req.query;
     const filter = {};
     
     if (status) filter.status = status;
-    if (category) filter.category = category;
 
     const events = await PublicEvent.find(filter)
       .populate('created_by', 'name email')
-      .sort({ event_date: 1 });
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -54,19 +53,48 @@ exports.getPublicEvent = async (req, res) => {
 // CREATE PUBLIC EVENT (Admin/Organizer only)
 exports.createPublicEvent = async (req, res) => {
   try {
-    const { title, description, event_date, location, category } = req.body;
+    const { title, description, event_date, location, status } = req.body;
 
-    if (!title || !description || !event_date || !location || !category) {
+    // Validation
+    if (!title || !description || !event_date || !location) {
       return res.status(400).json({
         success: false,
         message: 'All fields are required'
       });
     }
 
+    // Title length validation
+    if (title.length > 150) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title must be less than 150 characters'
+      });
+    }
+
+    // Location length validation
+    if (location.length > 150) {
+      return res.status(400).json({
+        success: false,
+        message: 'Location must be less than 150 characters'
+      });
+    }
+
+    // Role validation
     if (req.user.role !== 'organizer' && req.user.role !== 'admin' && req.user.role !== 'superadmin') {
       return res.status(403).json({
         success: false,
         message: 'Only organizers and admins can create public events'
+      });
+    }
+
+    // Handle image upload
+    let imagePath = '';
+    if (req.file) {
+      imagePath = `/${req.file.destination.replace(/\\/g, '/')}/${req.file.filename}`;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Event image is required'
       });
     }
 
@@ -75,7 +103,8 @@ exports.createPublicEvent = async (req, res) => {
       description,
       event_date,
       location,
-      category,
+      status: status || 'upcoming',
+      image: imagePath,
       created_by: req.user._id
     });
 
@@ -87,6 +116,7 @@ exports.createPublicEvent = async (req, res) => {
       data: event
     });
   } catch (error) {
+    console.error('Error creating public event:', error);
     res.status(500).json({
       success: false,
       message: error.message
@@ -98,7 +128,7 @@ exports.createPublicEvent = async (req, res) => {
 exports.updatePublicEvent = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, event_date, location, category, status } = req.body;
+    const { title, description, event_date, location, status } = req.body;
 
     const event = await PublicEvent.findById(id);
     if (!event) {
@@ -108,12 +138,33 @@ exports.updatePublicEvent = async (req, res) => {
       });
     }
 
+    // Validation for title length
+    if (title && title.length > 150) {
+      return res.status(400).json({
+        success: false,
+        message: 'Title must be less than 150 characters'
+      });
+    }
+
+    // Validation for location length
+    if (location && location.length > 150) {
+      return res.status(400).json({
+        success: false,
+        message: 'Location must be less than 150 characters'
+      });
+    }
+
+    // Update fields
     if (title) event.title = title;
     if (description) event.description = description;
     if (event_date) event.event_date = event_date;
     if (location) event.location = location;
-    if (category) event.category = category;
     if (status) event.status = status;
+
+    // Handle image update
+    if (req.file) {
+      event.image = `/${req.file.destination.replace(/\\/g, '/')}/${req.file.filename}`;
+    }
 
     await event.save();
 
@@ -123,6 +174,7 @@ exports.updatePublicEvent = async (req, res) => {
       data: event
     });
   } catch (error) {
+    console.error('Error updating public event:', error);
     res.status(500).json({
       success: false,
       message: error.message
