@@ -100,15 +100,15 @@ exports.createPrivateEvent = async (req, res) => {
   try {
     console.log('Request body received:', req.body);
     
-    const { request_id, client_id, clientName, organizer_id, details, guests, budget, location, event_date, special_requirements, package_id } = req.body;
+    const { request_id, client_id, clientName, organizer_id, event_name, details, guests, budget, location, event_date, special_requirements, package_id } = req.body;
     
     console.log('Extracted client_id:', client_id);
     console.log('Extracted clientName:', clientName);
     
-    if (!request_id || !details) {
+    if (!request_id || !event_name || !details) {
       return res.status(400).json({
         success: false,
-        message: "Request ID and details are required"
+        message: "Request ID, event name and details are required"
       });
     }
 
@@ -144,6 +144,7 @@ exports.createPrivateEvent = async (req, res) => {
       client_id: actualClientId,  // Use client_id from request object
       clientName: clientName,  // Client name for display
       organizer_id: organizer_id,
+      event_name: event_name,
       details: details,
       guests: guests ? Number(guests) : undefined,
       budget: budget ? Number(budget) : undefined,
@@ -224,7 +225,7 @@ exports.getPrivateEvent = async (req, res) => {
 exports.updatePrivateEvent = async (req, res) => {
   try {
     const { id } = req.params;
-    const { details } = req.body;
+    const { event_name, details } = req.body;
 
     const event = await PrivateEvent.findById(id);
     if (!event) {
@@ -234,6 +235,7 @@ exports.updatePrivateEvent = async (req, res) => {
       });
     }
 
+    if (event_name) event.event_name = event_name;
     if (details) event.details = details;
 
     await event.save();

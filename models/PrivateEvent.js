@@ -17,6 +17,10 @@ const privateEventSchema = new mongoose.Schema(
       ref: 'Organizer',
       required: true
     },
+    event_name: {
+      type: String,
+      required: true
+    },
     details: {
       type: String,
       required: true

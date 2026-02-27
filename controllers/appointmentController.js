@@ -61,6 +61,7 @@ exports.getAllAppointments = async (req, res) => {
       client_id: event.request_id?.client_id,
       organizer_id: event.organizer_id,
       organizer: event.organizer_id, // Add organizer object
+      event_name: event.event_name,
       event_type: event.request_id?.event_type || 'Private Event',
       event_date: event.event_date || event.request_id?.event_date,
       location: event.location || event.request_id?.location,
@@ -184,6 +185,7 @@ exports.updateAppointment = async (req, res) => {
       client_id: appointment.request_id?.client_id,
       organizer_id: appointment.organizer_id,
       organizer: appointment.organizer_id,
+      event_name: appointment.event_name,
       event_type: appointment.request_id?.event_type || 'Private Event',
       event_date: appointment.event_date || appointment.request_id?.event_date,
       location: appointment.location || appointment.request_id?.location,
