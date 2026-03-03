@@ -177,7 +177,7 @@ exports.createPrivateEvent = async (req, res) => {
 // GET ALL PRIVATE EVENTS
 exports.getAllPrivateEvents = async (req, res) => {
   try {
-    const events = await PrivateEvent.find()
+    const events = await PrivateEvent.find({ status: 'completed' })
       .populate('request_id')
       .populate('organizer_id', 'name email')
       .sort({ createdAt: -1 });

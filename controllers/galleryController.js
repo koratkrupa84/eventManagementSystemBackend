@@ -26,10 +26,20 @@ exports.getAllGalleryImages = async (req, res) => {
         
         if (img.event_type === 'public') {
           const publicEvent = await PublicEvent.findById(img.event_id);
-          imgObj.event_id = publicEvent ? publicEvent.toObject() : null;
+          imgObj.event_id = publicEvent ? {
+            _id: publicEvent._id,
+            title: publicEvent.title,
+            event_date: publicEvent.event_date,
+            location: publicEvent.location
+          } : null;
         } else if (img.event_type === 'private') {
           const privateEvent = await PrivateEvent.findById(img.event_id);
-          imgObj.event_id = privateEvent ? privateEvent.toObject() : null;
+          imgObj.event_id = privateEvent ? {
+            _id: privateEvent._id,
+            event_name: privateEvent.event_name,
+            event_date: privateEvent.event_date,
+            location: privateEvent.location
+          } : null;
         }
         
         return imgObj;
