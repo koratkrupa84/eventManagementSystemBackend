@@ -4,11 +4,15 @@ const {
   getAllClients, 
   getClientById, 
   deleteClient, 
-  updateClientStatus 
+  updateClientStatus,
+  createClient
 } = require('../controllers/adminClientController');
 const { protect, isAdmin } = require('../middleware/authMiddleware');
 
 const router = express.Router();
+
+// POST /admin/clients - Create new client (admin only)
+router.post('/', protect, isAdmin, createClient);
 
 // GET /admin/clients - Get all clients with profiles (admin only)
 router.get('/', protect, isAdmin, getAllClients);

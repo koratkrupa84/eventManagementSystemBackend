@@ -118,13 +118,70 @@ exports.bookPrivateEvent = async (req, res) => {
 };
 
 // ===================== UPDATE PROFILE =====================
+// exports.updateProfile = async (req, res) => {
+//   try {
+//     const { name, phone, address } = req.body;
+//     const { id } = req.params; // Get ID from URL params
+//     const userId = req.user.id; // Get user ID from authenticated token
+
+//     // Verify that the user is updating their own profile
+//     if (id !== userId) {
+//       return res.status(403).json({
+//         success: false,
+//         message: "You can only update your own profile"
+//       });
+//     }
+
+//     // Update User name and other basic info
+//     await User.findByIdAndUpdate(id, { 
+//       name: name,
+//       phone: phone,
+//       address: address
+//     }, { new: true });
+
+//     // Update or create ClientProfile with user_id reference
+//     let profile = await ClientProfile.findOne({ user_id: id });
+//     if (profile) {
+//       profile.phone = phone;
+//       profile.address = address;
+//       await profile.save();
+//     } else {
+//       profile = new ClientProfile({ 
+//         user_id: id, 
+//         phone: phone, 
+//         address: address 
+//       });
+//       await profile.save();
+//     }
+
+//     // Update user with profile reference
+//     await User.findByIdAndUpdate(id, { 
+//       clientProfile: profile._id
+//     }, { new: true });
+
+//     // Get updated user data
+//     const updatedUser = await User.findById(id).select("-password");
+
+//     res.json({ 
+//       success: true, 
+//       message: "Profile updated successfully",
+//       data: updatedUser
+//     });
+//   } catch (error) {
+//     console.log("Profile update error:", error);
+//     res.status(500).json({ 
+//       success: false, 
+//       message: "Profile update failed" 
+//     });
+//   }
+// };
+
 exports.updateProfile = async (req, res) => {
   try {
     const { name, phone, address } = req.body;
-    const { id } = req.params; // Get ID from URL params
-    const userId = req.user.id; // Get user ID from authenticated token
+    const { id } = req.params;
+    const userId = req.user.id;
 
-    // Verify that the user is updating their own profile
     if (id !== userId) {
       return res.status(403).json({
         success: false,
@@ -132,41 +189,53 @@ exports.updateProfile = async (req, res) => {
       });
     }
 
-    // Update User name and other basic info
-    await User.findByIdAndUpdate(id, { 
-      name: name,
-      phone: phone,
-      address: address
-    }, { new: true });
+    // Update User
+    await User.findByIdAndUpdate(
+      id,
+      {
+        name,
+        phone,
+        address
+      },
+      { new: true }
+    );
 
-    // Update or create ClientProfile with user_id reference
-    let profile = await ClientProfile.findOne({ user_id: id });
+    // Find profile
+    let profile = await ClientProfile.findOne({ userId: id });
+
     if (profile) {
       profile.phone = phone;
       profile.address = address;
       await profile.save();
     } else {
-      profile = new ClientProfile({ 
-        user_id: id, 
-        phone: phone, 
-        address: address 
+      profile = new ClientProfile({
+        userId: id,
+        phone,
+        address
       });
       await profile.save();
     }
 
-    // Get updated user data
+    // Update user profile reference
+    await User.findByIdAndUpdate(
+      id,
+      { clientProfile: profile._id },
+      { new: true }
+    );
+
     const updatedUser = await User.findById(id).select("-password");
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: "Profile updated successfully",
       data: updatedUser
     });
+
   } catch (error) {
     console.log("Profile update error:", error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Profile update failed" 
+    res.status(500).json({
+      success: false,
+      message: "Profile update failed"
     });
   }
 };
