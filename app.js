@@ -23,6 +23,7 @@ const requestRoutes = require('./routes/requestRoutes');
 const organizerRoutes = require('./routes/organizerRoutes');
 const adminOrganizerRoutes = require('./routes/adminOrganizerRoutes');
 const adminClientRoutes = require('./routes/adminClientRoutes');
+const publicOrganizerRoutes = require('./routes/publicOrganizerRoutes');
 
 const app = express();
 const PORT = process.env.PORT;
@@ -57,6 +58,7 @@ app.use('/admin/requests', requestRoutes);
 app.use('/organizer', organizerRoutes);
 app.use('/admin/organizers', adminOrganizerRoutes);
 app.use('/admin/clients', adminClientRoutes);
+app.use('/api/organizers', publicOrganizerRoutes);
 
 
 app.get('/', (req, res) => {
