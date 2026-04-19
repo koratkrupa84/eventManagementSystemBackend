@@ -53,13 +53,21 @@ exports.getPublicEvent = async (req, res) => {
 // CREATE PUBLIC EVENT (Admin/Organizer only)
 exports.createPublicEvent = async (req, res) => {
   try {
-    const { title, description, event_date, location, status } = req.body;
+    const { title, description, event_date, location, status, price } = req.body;
 
     // Validation
-    if (!title || !description || !event_date || !location) {
+    if (!title || !description || !event_date || !location || price === undefined) {
       return res.status(400).json({
         success: false,
         message: 'All fields are required'
+      });
+    }
+
+    // Price validation
+    if (price < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Price must be a positive number'
       });
     }
 
@@ -105,7 +113,8 @@ exports.createPublicEvent = async (req, res) => {
       location,
       status: status || 'upcoming',
       image: imagePath,
-      created_by: req.user._id
+      created_by: req.user._id,
+      price: parseFloat(price)
     });
 
     await event.save();
@@ -128,7 +137,7 @@ exports.createPublicEvent = async (req, res) => {
 exports.updatePublicEvent = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, event_date, location, status } = req.body;
+    const { title, description, event_date, location, status, price } = req.body;
 
     const event = await PublicEvent.findById(id);
     if (!event) {
@@ -154,12 +163,21 @@ exports.updatePublicEvent = async (req, res) => {
       });
     }
 
+    // Price validation
+    if (price !== undefined && price < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Price must be a positive number'
+      });
+    }
+
     // Update fields
     if (title) event.title = title;
     if (description) event.description = description;
     if (event_date) event.event_date = event_date;
     if (location) event.location = location;
     if (status) event.status = status;
+    if (price !== undefined) event.price = parseFloat(price);
 
     // Handle image update
     if (req.file) {
