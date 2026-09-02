@@ -26,12 +26,7 @@ const adminClientRoutes = require('./routes/adminClientRoutes');
 const publicOrganizerRoutes = require('./routes/publicOrganizerRoutes');
 
 const app = express();
-const PORT = process.env.PORT;
-
-// Connect to MongoDB
-dbConnect();
-// Create default admin if not exists
-createDefaultAdmin();
+// const PORT = process.env.PORT;
 
 // Middleware
 app.use(cors());
@@ -61,11 +56,24 @@ app.use('/admin/clients', adminClientRoutes);
 app.use('/api/organizers', publicOrganizerRoutes);
 
 
+// Home route
 app.get('/', (req, res) => {
-  res.send('Event Management API is running');
+  res.json({
+    success: true,
+    message: 'Event Management API is running'
+  });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
-});
+// Connect database
+dbConnect();
+
+// Create default admin
+createDefaultAdmin();
+
+// Export app for Vercel
+module.exports = app;
+
+// app.listen(PORT, () => {
+//   console.log(`🚀 Server is running on http://localhost:${PORT}`);
+// });
 
